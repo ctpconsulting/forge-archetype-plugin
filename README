@@ -3,7 +3,7 @@ This is a scriptable archetype plugin for SeamForge
 USAGE
 
 forge $ forge git-plugin git://github.com/ctpconsulting/forge-archetype-plugin.git
-forge $ archetype create archetypefile.forge myproject
+forge $ archetype create archetypefile.forge --named myproject
 
 - archetypefile.forge is a groovy script and could look like this:
 
