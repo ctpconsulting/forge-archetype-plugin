@@ -19,11 +19,12 @@ public class Module extends ArchetypeSupport {
     
     private static final String EXTENSION = "extension";
     protected static final String MODULE = "module";
+    protected static final String PROMPT = "prompt";
     
     private String extension;
     
     protected String name;
-    protected List<PluginCommand> plugins = new LinkedList<PluginCommand>();
+    protected List<Executable> plugins = new LinkedList<Executable>();
     
     public Module(BeanManager beanManager) {
         this(beanManager, null);
@@ -41,6 +42,11 @@ public class Module extends ArchetypeSupport {
             extension = (String) args[0];
             return this;
         }
+        if (PROMPT.equals(methodName)) {
+            PromptCommand prompt = new PromptCommand(args);
+            plugins.add(prompt);
+            return this;
+        }
         if (MODULE.equals(methodName)) {
             invokeClosure((Closure) args[0]);
             return this;
@@ -48,14 +54,23 @@ public class Module extends ArchetypeSupport {
         PluginCommand command = new PluginCommand(beanManager, methodName);
         plugins.add(command);
         return command.invokeMethod(methodName, obj);
-
+    }
+    
+    public Model pom() {
+        Project project = resolveProject();
+        MavenCoreFacet facet = project.getFacet(MavenCoreFacet.class);
+        return facet.getPOM();
+    }
+    
+    public void create() {
+        create(resolveShell());
     }
     
     public void create(Shell shell) {
-        create(null, shell);
+        create(shell, null);
     }
 
-    public void create(Module parent, Shell shell) {
+    public void create(Shell shell, ArchetypeContext parentCtx) {
         if (extension == null)
             throw new RuntimeException("Module should have a name extension - please add an 'extension' property.");
         String moduleName = getModuleName();
@@ -67,15 +82,16 @@ public class Module extends ArchetypeSupport {
                 .getUnderlyingResourceObject().getAbsolutePath();
         
         shell.execute("new-project --named " + moduleName + " --topLevelPackage " + basePackage + " --projectFolder " + folder);
-        runPlugins(shell);
+        ArchetypeContext context = new ArchetypeContext(this, parentCtx);
+        runPlugins(shell, context);
         
-        if (parent != null) {
+        if (parentCtx != null) {
             ShellMessages.info(shell, "Adding parent POM to " + moduleName);
             MavenCoreFacet facet = project.getFacet(MavenCoreFacet.class);
             Model pom = facet.getPOM();
             Parent parentPom = new Parent();
             parentPom.setGroupId(basePackage);
-            parentPom.setArtifactId(parent.getName());
+            parentPom.setArtifactId(parentCtx.getModule().getName());
             parentPom.setRelativePath("../");
             parentPom.setVersion(pom.getVersion());
             pom.setParent(parentPom);
@@ -87,9 +103,9 @@ public class Module extends ArchetypeSupport {
         return name + "-" + extension;
     }
     
-    protected void runPlugins(Shell shell) {
-        for (PluginCommand plugin : plugins) {
-            plugin.run(shell);
+    protected void runPlugins(Shell shell, ArchetypeContext context) {
+        for (Executable plugin : plugins) {
+            plugin.execute(shell, context);
         }
     }
     

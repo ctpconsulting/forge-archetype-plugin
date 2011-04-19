@@ -7,12 +7,13 @@ import java.util.List;
 
 import javax.enterprise.inject.spi.BeanManager;
 
+import org.jboss.seam.forge.archetype.util.Interpolator;
 import org.jboss.seam.forge.shell.Shell;
 import org.jboss.seam.forge.shell.ShellMessages;
 
-class PluginCommand extends ArchetypeSupport {
+class PluginCommand extends ArchetypeSupport implements Executable {
     
-    private List<Command> contexts = new LinkedList<Command>();
+    private List<Command> commands = new LinkedList<Command>();
     
     private final String plugin;
     
@@ -24,19 +25,19 @@ class PluginCommand extends ArchetypeSupport {
     @Override
     public Object invokeMethod(String methodName, Object arg) {
         Object[] args = asArray(arg);
-        if (methodName.equals("minus")) {
-            Command keep = contexts.get(contexts.size() - 2);
-            Command discard = contexts.get(contexts.size() - 1);
+        if (methodName.equals("minus")) { // groovy shell interprets - as minus()
+            Command keep = commands.get(commands.size() - 2);
+            Command discard = commands.get(commands.size() - 1);
             keep.setName(keep.getName() + "-" + discard.getName());
             keep.setArgs(discard.getArgs());
-            contexts.remove(discard);
+            commands.remove(discard);
             return this;
         }
         if (args[0] instanceof Closure) {
             invokeClosure((Closure) args[0]);
         } else {
-            Command context = new Command(methodName, args);
-            contexts.add(context);
+            Command command = new Command(methodName, args);
+            commands.add(command);
         }
         return this;
     }
@@ -44,16 +45,17 @@ class PluginCommand extends ArchetypeSupport {
     @Override
     public Object getProperty(String property) {
         Command context = new Command(property, null);
-        contexts.add(context);
+        commands.add(context);
         return this;
     }
 
-    public void run(Shell shell) {
-        for (Command context : contexts) {
-            String execute = plugin + " " + context.getName();
-            if (context.getArgs() != null && context.getArgs().length > 0) {
-                for (int i = 0; i < context.getArgs().length; i++) {
-                    execute += " " + context.arg(i);
+    @Override
+    public void execute(Shell shell, ArchetypeContext context) {
+        for (Command command : commands) {
+            String execute = plugin + " " + command.getName();
+            if (command.getArgs() != null && command.getArgs().length > 0) {
+                for (int i = 0; i < command.getArgs().length; i++) {
+                    execute += " " + Interpolator.interpolate(command.arg(i), context);
                 }
             }
             ShellMessages.info(shell, "Running " + execute);

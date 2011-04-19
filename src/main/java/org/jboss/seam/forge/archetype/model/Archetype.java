@@ -36,6 +36,11 @@ public class Archetype extends Module {
             modules.add(module);
             return module.invokeMethod(methodName, obj);
         }
+        if (PROMPT.equals(methodName)) {
+            PromptCommand prompt = new PromptCommand(args);
+            plugins.add(prompt);
+            return this;
+        }
         if (!ROOT_CALL.equals(methodName)) {
             PluginCommand command = new PluginCommand(beanManager, methodName);
             plugins.add(command);
@@ -47,24 +52,20 @@ public class Archetype extends Module {
         return this;
     }
     
-    public void create() {
-        Shell shell = resolveShell();
-        create(shell);
-    }
-    
     @Override
     public void create(Shell shell) {
         ShellMessages.info(shell, "Creating new project " + name);
         shell.execute("new-project --named " + name);
-        runPlugins(shell);
-        runModules(shell);
+        ArchetypeContext context = new ArchetypeContext(this);
+        runPlugins(shell, context);
+        runModules(shell, context);
         postProcess(shell);
         created = true;
     }
 
-    protected void runModules(Shell shell) {
+    protected void runModules(Shell shell, ArchetypeContext context) {
         for (Module module : modules) {
-            module.create(this, shell);
+            module.create(shell, context);
             shell.execute("cd ..");
         }
     }

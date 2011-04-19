@@ -1,0 +1,41 @@
+This is a scriptable archetype plugin for SeamForge
+
+USAGE
+
+forge $ forge git-plugin git://github.com/ctpconsulting/forge-archetype-plugin.git
+forge $ archetype create archetypefile.forge myproject
+
+- archetypefile.forge is a groovy script and could look like this:
+
+println 'Creating a test Archetype!';
+
+archetype {
+    prompt('seam.version','Which version of Seam would you like to use?','3.0.0.Final')
+    project {
+        add-dependency('org.projectlombok:lombok:0.9.3:provided')
+    }
+    module {
+        extension 'model'
+        jrebel {
+            setup
+        }
+        project {
+            install-facet('forge.spec.jpa')
+        }
+    }
+    module {
+        extension 'web'
+        jrebel {
+            setup
+            container(named:'JBOSS6')
+        }
+        project {
+            install-facet('forge.spec.servlet')
+            add-dependency('#{parent.groupId}:#{parent.artifactId}-model:#{parent.version}') // won't work yet...
+            add-dependency('org.jboss.seam.faces:seam-faces:#{seam.version}')
+            add-dependency('org.jboss.seam.catch:seam-catch:#{seam.version}')
+        }
+    }
+}.create()
+
+println 'Finished!';
