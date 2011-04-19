@@ -6,6 +6,7 @@ import groovy.lang.GroovyObjectSupport;
 import javax.enterprise.inject.spi.BeanManager;
 
 import org.jboss.seam.forge.project.Project;
+import org.jboss.seam.forge.shell.Shell;
 import org.jboss.seam.forge.shell.util.BeanManagerUtils;
 
 public abstract class ArchetypeSupport extends GroovyObjectSupport {
@@ -29,6 +30,10 @@ public abstract class ArchetypeSupport extends GroovyObjectSupport {
     
     protected Project resolveProject() {
         return BeanManagerUtils.getContextualInstance(beanManager, Project.class);
+    }
+    
+    protected Shell resolveShell() {
+        return BeanManagerUtils.getContextualInstance(beanManager, Shell.class);
     }
     
 }
